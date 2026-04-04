@@ -1,6 +1,6 @@
-# Cloudflare worker example app
+# Cloudflare worker example app (Python)
 
-awwbot is an example app that brings the cuteness of `r/aww` straight to your Discord server, hosted on Cloudflare workers. Cloudflare Workers are a convenient way to host Discord bots due to the free tier, simple development model, and automatically managed environment (no VMs!).
+awwbot is an example app that brings the cuteness of `r/aww` straight to your Discord server, hosted on Cloudflare Workers and written in **Python**. Cloudflare Workers are a convenient way to host Discord bots due to the free tier, simple development model, and automatically managed environment (no VMs!).
 
 The tutorial for building awwbot is [in the developer documentation](https://discord.com/developers/docs/tutorials/hosting-on-cloudflare-workers)
 
@@ -21,12 +21,18 @@ Below is a basic overview of the project structure:
 ```
 ├── .github/workflows/ci.yaml -> Github Action configuration
 ├── src
-│   ├── commands.js           -> JSON payloads for commands
-│   ├── reddit.js             -> Interactions with the Reddit API
-│   ├── register.js           -> Sets up commands with the Discord API
-│   ├── server.js             -> Discord app logic and routing
+│   ├── commands.js           -> JSON payloads for commands (original JS)
+│   ├── reddit.js             -> Interactions with the Reddit API (original JS)
+│   ├── register.js           -> Sets up commands with the Discord API (original JS)
+│   ├── server.js             -> Discord app logic and routing (original JS)
+├── src-python
+│   ├── commands.py           -> Command definitions
+│   ├── reddit.py             -> Interactions with the Reddit API
+│   ├── register.py           -> Sets up commands with the Discord API (run locally)
+│   ├── server.py             -> Discord app logic and routing (Worker entry point)
 ├── test
 |   ├── test.js               -> Tests for app
+├── pyproject.toml            -> Python project config (for pywrangler)
 ├── wrangler.toml             -> Configuration for Cloudflare workers
 ├── package.json
 ├── README.md
@@ -60,14 +66,13 @@ First clone the project:
 git clone https://github.com/discord/cloudflare-sample-app.git
 ```
 
-Then navigate to its directory and install dependencies:
+Then navigate to its directory and install [uv](https://docs.astral.sh/uv/#installation) (if not already installed):
 
 ```
 cd cloudflare-sample-app
-npm install
 ```
 
-> ⚙️ The dependencies in this project require at least v18 of [Node.js](https://nodejs.org/en/)
+> ⚙️ Make sure [uv](https://docs.astral.sh/uv/#installation) and [Node.js](https://nodejs.org/en/) are installed before proceeding.
 
 ### Local configuration
 
@@ -82,15 +87,15 @@ Rename `example.dev.vars` to `.dev.vars`, and make sure to set each variable.
 The following command only needs to be run once:
 
 ```
-$ npm run register
+$ python src-python/register.py
 ```
 
 ### Run app
 
-Now you should be ready to start your server:
+Now you should be ready to start your local development server:
 
 ```
-$ npm start
+$ uv run pywrangler dev
 ```
 
 ### Setting up ngrok
@@ -98,7 +103,7 @@ $ npm start
 When a user types a slash command, Discord will send an HTTP request to a given endpoint. During local development this can be a little challenging, so we're going to use a tool called `ngrok` to create an HTTP tunnel.
 
 ```
-$ npm run ngrok
+$ ngrok http 8787
 ```
 
 ![forwarding](https://user-images.githubusercontent.com/534619/157511497-19c8cef7-c349-40ec-a9d3-4bc0147909b0.png)
@@ -111,23 +116,10 @@ This is the process we'll use for local testing and development. When you've pub
 
 ## Deploying app
 
-This repository is set up to automatically deploy to Cloudflare Workers when new changes land on the `main` branch. To deploy manually, run `npm run publish`, which uses the `wrangler publish` command under the hood. Publishing via a GitHub Action requires obtaining an [API Token and your Account ID from Cloudflare](https://developers.cloudflare.com/workers/wrangler/cli-wrangler/authentication/#generate-tokens). These are stored [as secrets in the GitHub repository](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository), making them available to GitHub Actions. The following configuration in `.github/workflows/ci.yaml` demonstrates how to tie it all together:
+To deploy the Worker to Cloudflare, run:
 
-```yaml
-release:
-  if: github.ref == 'refs/heads/main'
-  runs-on: ubuntu-latest
-  needs: [test, lint]
-  steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: 18
-    - run: npm install
-    - run: npm run publish
-      env:
-        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+```
+$ uv run pywrangler deploy
 ```
 
 ### Storing secrets
