@@ -4,8 +4,8 @@
 # To make this agent available, merge this file into the default repository branch.
 # For format details, see: https://gh.io/customagents/config
 
-name:繁體中文Agent
-description:一個使用繁體中文的coding agent
+name: 繁體中文Agent
+description: 一個使用繁體中文的coding agent
 ---
 
 # Agent in Chinese(Traditional)
