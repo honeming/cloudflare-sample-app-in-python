@@ -1,10 +1,11 @@
 # docs: https://vercel.com/docs/functions/functions-api-reference/vercel-sdk-python
-from http.server import BaseHTTPRequestHandler
 import json
 import os
 import random
+import logging
 import urllib.error
 import urllib.request
+from http.server import BaseHTTPRequestHandler
 from typing import Any
 
 from nacl.exceptions import BadSignatureError
@@ -23,6 +24,7 @@ MESSAGE_FLAG_EPHEMERAL = 64
 
 REDDIT_URL = "https://www.reddit.com/r/aww/hot.json"
 USER_AGENT = "awwbot:vercel-python:v1.0.0 (by /u/justinblat)"
+LOGGER = logging.getLogger(__name__)
 
 AWW_COMMAND = {
     "name": "awwww",
@@ -64,7 +66,8 @@ def _get_cute_url() -> str | None:
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
             data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError):
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as exc:
+        LOGGER.warning("Failed to fetch Reddit content: %s", exc)
         return None
 
     posts = []
@@ -96,7 +99,18 @@ def handle_interaction_request(
     body_text: str,
     env: dict[str, str] | None = None,
 ) -> tuple[int, dict[str, str], str]:
-    """Handle Discord interaction HTTP requests and return status, headers, and body."""
+    """Handle Discord interaction requests.
+
+    Args:
+        method: HTTP method (for example, GET or POST).
+        path: Request path; only /api/interactions is handled.
+        headers: Lowercased request headers.
+        body_text: Raw request body as UTF-8 text.
+        env: Optional environment variable mapping; defaults to os.environ.
+
+    Returns:
+        A tuple of (status_code, response_headers, response_body_text).
+    """
     env_vars = env or os.environ
 
     if method == "GET" and path == "/api/interactions":
@@ -128,7 +142,7 @@ def handle_interaction_request(
         command_name = ((interaction.get("data") or {}).get("name") or "").lower()
 
         if command_name == AWW_COMMAND["name"].lower():
-            cute_url = _get_cute_url() or "No content available at the moment, please try again later."
+            cute_url = _get_cute_url() or "Unable to fetch content from Reddit. Please try again later."
             return _json_response(
                 {
                     "type": INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,

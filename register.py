@@ -65,7 +65,10 @@ def main() -> None:
         ]
     )
 
-    print("Set DISCORD_TOKEN first, then run this command to register commands:")
+    print(
+        "Set DISCORD_TOKEN first (for example: export DISCORD_TOKEN=your_token_here), "
+        "then run this command to register commands:"
+    )
     print(curl_command)
 
 
