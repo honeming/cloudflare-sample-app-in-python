@@ -96,6 +96,7 @@ def handle_interaction_request(
     body_text: str,
     env: dict[str, str] | None = None,
 ) -> tuple[int, dict[str, str], str]:
+    """Handle Discord interaction HTTP requests and return status, headers, and body."""
     env_vars = env or os.environ
 
     if method == "GET" and path == "/api/interactions":
@@ -156,6 +157,7 @@ def handle_interaction_request(
 
 class handler(BaseHTTPRequestHandler):
     def _handle(self):
+        """Read the incoming request and write the mapped interaction response."""
         content_length = int(self.headers.get("content-length", "0"))
         body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else ""
 
