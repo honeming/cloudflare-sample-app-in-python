@@ -3,7 +3,6 @@ from http.server import BaseHTTPRequestHandler
 import json
 import os
 import random
-import shlex
 import urllib.error
 import urllib.request
 from typing import Any
@@ -91,49 +90,6 @@ def _get_cute_url() -> str | None:
     return random.choice(posts)
 
 
-def _load_dev_vars(path: str = ".dev.vars") -> dict[str, str]:
-    vars_ = {}
-    try:
-        with open(path) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" in line:
-                    key, _, value = line.partition("=")
-                    vars_[key.strip()] = value.strip().strip('"').strip("'")
-    except FileNotFoundError:
-        pass
-    return vars_
-
-
-def print_register_curl_command() -> None:
-    dev_vars = _load_dev_vars()
-    application_id = os.environ.get("DISCORD_APPLICATION_ID") or dev_vars.get("DISCORD_APPLICATION_ID")
-
-    if not application_id:
-        raise ValueError("The DISCORD_APPLICATION_ID environment variable is required.")
-
-    url = f"https://discord.com/api/v10/applications/{application_id}/commands"
-    payload = json.dumps([AWW_COMMAND, INVITE_COMMAND], separators=(",", ":"))
-
-    curl_command = " ".join(
-        [
-            "curl",
-            "-X",
-            "PUT",
-            shlex.quote(url),
-            "-H",
-            shlex.quote("Content-Type: application/json"),
-            "-H",
-            shlex.quote("Authorization: Bot $DISCORD_TOKEN"),
-            "--data-raw",
-            shlex.quote(payload),
-        ]
-    )
-
-    print("請先確認已設定 DISCORD_TOKEN，然後執行以下指令註冊命令：")
-    print(curl_command)
 
 
 def handle_interaction_request(
@@ -237,7 +193,3 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         self._handle()
-
-
-if __name__ == "__main__":
-    print_register_curl_command()

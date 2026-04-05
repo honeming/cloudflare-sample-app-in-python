@@ -16,11 +16,7 @@ awwbot is a sample Discord bot that returns cute content from `r/aww`, built wit
 ├── .github/workflows/ci.yaml   -> GitHub Actions
 ├── api
 │   └── interactions.py         -> Vercel Python Function entrypoint
-├── src-python
-│   ├── commands.py             -> Command definitions
-│   ├── reddit.py               -> Reddit API access
-│   ├── register.py             -> Prints curl command for Discord command registration
-│   └── server.py               -> Discord interaction core logic
+├── register.py                 -> Prints curl command for Discord command registration
 ├── pyproject.toml              -> Python project config
 ├── package.json
 └── README.md
@@ -41,7 +37,7 @@ You can store these in `.dev.vars` (copy from `example.dev.vars`).
 Command registration is now manual by design:
 
 ```bash
-python src-python/register.py
+python register.py
 ```
 
 The script prints a `curl` command. Run that command in an environment where `DISCORD_TOKEN` is set.
