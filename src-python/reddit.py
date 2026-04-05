@@ -6,6 +6,7 @@ and return a random result.
 
 import json
 import random
+import urllib.error
 import urllib.request
 
 REDDIT_URL = "https://www.reddit.com/r/aww/hot.json"
@@ -18,8 +19,11 @@ def get_cute_url():
         headers={"User-Agent": USER_AGENT},
     )
 
-    with urllib.request.urlopen(request, timeout=10) as response:
-        data = json.loads(response.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError):
+        return None
 
     posts = []
     for post in data.get("data", {}).get("children", []):

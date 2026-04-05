@@ -80,7 +80,7 @@ def handle_interaction_request(
         command_name = ((interaction.get("data") or {}).get("name") or "").lower()
 
         if command_name == AWW_COMMAND["name"].lower():
-            cute_url = get_cute_url() or "目前沒有可用內容，請稍後再試。"
+            cute_url = get_cute_url() or "No content available at the moment, please try again later."
             return _json_response(
                 {
                     "type": INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
