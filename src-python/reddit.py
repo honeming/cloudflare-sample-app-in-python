@@ -6,35 +6,23 @@ and return a random result.
 
 import json
 import random
-
-from js import Object, fetch
-from pyodide.ffi import to_js
+import urllib.request
 
 REDDIT_URL = "https://www.reddit.com/r/aww/hot.json"
+USER_AGENT = "awwbot:vercel-python:v1.0.0"
 
 
-async def get_cute_url():
-    response = await fetch(
+def get_cute_url():
+    request = urllib.request.Request(
         REDDIT_URL,
-        headers=to_js(
-            {"User-Agent": "justinbeckwith:awwbot:v1.0.0 (by /u/justinblat)"},
-            dict_converter=Object.fromEntries,
-        ),
+        headers={"User-Agent": USER_AGENT},
     )
 
-    if not response.ok:
-        error_text = f"Error fetching {response.url}: {response.status} {response.statusText}"
-        try:
-            error = await response.text()
-            if error:
-                error_text = f"{error_text} \n\n {error}"
-        except Exception:
-            pass
-        raise Exception(error_text)
+    with urllib.request.urlopen(request, timeout=10) as response:
+        data = json.loads(response.read().decode("utf-8"))
 
-    data = json.loads(await response.text())
     posts = []
-    for post in data["data"]["children"]:
+    for post in data.get("data", {}).get("children", []):
         post_data = post.get("data", {})
         if post_data.get("is_gallery"):
             continue

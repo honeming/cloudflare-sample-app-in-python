@@ -1,14 +1,11 @@
-"""
-The core server that runs on a Cloudflare Worker.
-Reference: https://developers.cloudflare.com/workers/languages/python/
-"""
+"""Discord interaction handling for Vercel Python Functions."""
 
 import json
-from urllib.parse import urlparse
+import os
+from typing import Any
 
-from js import Object, console, crypto
-from pyodide.ffi import to_js
-from workers import Response, WorkerEntrypoint
+from nacl.exceptions import BadSignatureError
+from nacl.signing import VerifyKey
 
 from commands import AWW_COMMAND, INVITE_COMMAND
 from reddit import get_cute_url
@@ -25,114 +22,86 @@ INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE = 4
 MESSAGE_FLAG_EPHEMERAL = 64
 
 
-def json_response(body_dict, status=200):
-    """Return a JSON Response with the correct content-type header."""
-    return Response(
+def _json_response(body_dict: dict[str, Any], status: int = 200) -> tuple[int, dict[str, str], str]:
+    return (
+        status,
+        {"Content-Type": "application/json;charset=UTF-8"},
         json.dumps(body_dict),
-        headers=to_js(
-            {"content-type": "application/json;charset=UTF-8"},
-            dict_converter=Object.fromEntries,
-        ),
-        status=status,
     )
 
 
-async def verify_discord_request(request, env):
-    """
-    Verify the incoming Discord request using Ed25519 signature verification
-    via the Web Crypto API (SubtleCrypto).
-
-    Returns (is_valid: bool, interaction: dict | None).
-    """
-    signature = request.headers.get("x-signature-ed25519")
-    timestamp = request.headers.get("x-signature-timestamp")
-
-    if not signature or not timestamp:
-        return False, None
-
-    body = await request.text()
+def _verify_discord_request(signature: str | None, timestamp: str | None, body: str, public_key: str) -> bool:
+    if not signature or not timestamp or not public_key:
+        return False
 
     try:
-        # Import the Ed25519 public key from raw bytes
-        public_key = await crypto.subtle.importKey(
-            "raw",
-            to_js(bytes.fromhex(env.DISCORD_PUBLIC_KEY)),
-            to_js({"name": "Ed25519"}, dict_converter=Object.fromEntries),
-            False,
-            to_js(["verify"]),
-        )
-
-        # The signed message is timestamp + body (both as UTF-8 bytes)
-        message_bytes = (timestamp + body).encode("utf-8")
-
-        is_valid = await crypto.subtle.verify(
-            "Ed25519",
-            public_key,
-            to_js(bytes.fromhex(signature)),
-            to_js(message_bytes),
-        )
-
-        if not is_valid:
-            return False, None
-
-        return True, json.loads(body)
-    except Exception as e:
-        console.error(f"Error verifying Discord request: {e}")
-        return False, None
+        verify_key = VerifyKey(bytes.fromhex(public_key))
+        verify_key.verify(f"{timestamp}{body}".encode("utf-8"), bytes.fromhex(signature))
+        return True
+    except (ValueError, BadSignatureError):
+        return False
 
 
-class Default(WorkerEntrypoint):
-    async def fetch(self, request):
-        path = urlparse(request.url).path
-        method = request.method
+def handle_interaction_request(
+    method: str,
+    path: str,
+    headers: dict[str, str],
+    body_text: str,
+    env: dict[str, str] | None = None,
+) -> tuple[int, dict[str, str], str]:
+    env_vars = env or os.environ
 
-        # GET / — simple health-check page
-        if method == "GET" and path == "/":
-            return Response(f"👋 {self.env.DISCORD_APPLICATION_ID}")
+    if method == "GET" and path == "/api/interactions":
+        return 200, {"Content-Type": "text/plain;charset=UTF-8"}, "OK"
 
-        # POST / — all Discord interactions arrive here
-        if method == "POST" and path == "/":
-            is_valid, interaction = await verify_discord_request(request, self.env)
-            if not is_valid or interaction is None:
-                return Response("Bad request signature.", status=401)
+    if method != "POST" or path != "/api/interactions":
+        return 404, {"Content-Type": "text/plain;charset=UTF-8"}, "Not Found."
 
-            # PING: required during initial webhook handshake
-            if interaction["type"] == INTERACTION_TYPE_PING:
-                return json_response({"type": INTERACTION_RESPONSE_TYPE_PONG})
+    signature = headers.get("x-signature-ed25519")
+    timestamp = headers.get("x-signature-timestamp")
 
-            # APPLICATION_COMMAND: slash commands sent by users
-            if interaction["type"] == INTERACTION_TYPE_APPLICATION_COMMAND:
-                command_name = interaction["data"]["name"].lower()
+    if not _verify_discord_request(
+        signature,
+        timestamp,
+        body_text,
+        env_vars.get("DISCORD_PUBLIC_KEY", ""),
+    ):
+        return 401, {"Content-Type": "text/plain;charset=UTF-8"}, "Bad request signature."
 
-                if command_name == AWW_COMMAND["name"].lower():
-                    cute_url = await get_cute_url()
-                    return json_response(
-                        {
-                            "type": INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
-                            "data": {"content": cute_url},
-                        }
-                    )
+    try:
+        interaction = json.loads(body_text)
+    except json.JSONDecodeError:
+        return _json_response({"error": "Invalid JSON body"}, status=400)
 
-                if command_name == INVITE_COMMAND["name"].lower():
-                    application_id = self.env.DISCORD_APPLICATION_ID
-                    invite_url = (
-                        f"https://discord.com/oauth2/authorize"
-                        f"?client_id={application_id}&scope=applications.commands"
-                    )
-                    return json_response(
-                        {
-                            "type": INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
-                            "data": {
-                                "content": invite_url,
-                                "flags": MESSAGE_FLAG_EPHEMERAL,
-                            },
-                        }
-                    )
+    if interaction.get("type") == INTERACTION_TYPE_PING:
+        return _json_response({"type": INTERACTION_RESPONSE_TYPE_PONG})
 
-                return json_response({"error": "Unknown Type"}, status=400)
+    if interaction.get("type") == INTERACTION_TYPE_APPLICATION_COMMAND:
+        command_name = ((interaction.get("data") or {}).get("name") or "").lower()
 
-            console.error("Unknown Type")
-            return json_response({"error": "Unknown Type"}, status=400)
+        if command_name == AWW_COMMAND["name"].lower():
+            cute_url = get_cute_url() or "目前沒有可用內容，請稍後再試。"
+            return _json_response(
+                {
+                    "type": INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
+                    "data": {"content": cute_url},
+                }
+            )
 
-        # All other routes
-        return Response("Not Found.", status=404)
+        if command_name == INVITE_COMMAND["name"].lower():
+            application_id = env_vars.get("DISCORD_APPLICATION_ID", "")
+            invite_url = (
+                "https://discord.com/oauth2/authorize"
+                f"?client_id={application_id}&scope=applications.commands"
+            )
+            return _json_response(
+                {
+                    "type": INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
+                    "data": {
+                        "content": invite_url,
+                        "flags": MESSAGE_FLAG_EPHEMERAL,
+                    },
+                }
+            )
+
+    return _json_response({"error": "Unknown Type"}, status=400)

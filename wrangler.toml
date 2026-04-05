@@ -1,9 +1,0 @@
-name = "awwbot"
-main = "./src-python/server.py"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["python_workers"]
-
-# [secrets]
-# DISCORD_TOKEN
-# DISCORD_PUBLIC_KEY
-# DISCORD_APPLICATION_ID
