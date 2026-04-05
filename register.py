@@ -21,6 +21,7 @@ INVITE_COMMAND = {
 
 
 def load_dev_vars(path: str = ".dev.vars") -> dict[str, str]:
+    """Load KEY=VALUE entries from a .dev.vars file into a dictionary."""
     vars_ = {}
     try:
         with open(path) as f:
@@ -37,6 +38,7 @@ def load_dev_vars(path: str = ".dev.vars") -> dict[str, str]:
 
 
 def main() -> None:
+    """Print a ready-to-run curl command for Discord command registration."""
     dev_vars = load_dev_vars()
     application_id = os.environ.get("DISCORD_APPLICATION_ID") or dev_vars.get(
         "DISCORD_APPLICATION_ID"

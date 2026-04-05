@@ -89,9 +89,6 @@ def _get_cute_url() -> str | None:
 
     return random.choice(posts)
 
-
-
-
 def handle_interaction_request(
     method: str,
     path: str,
