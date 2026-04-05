@@ -10,7 +10,7 @@ import urllib.error
 import urllib.request
 
 REDDIT_URL = "https://www.reddit.com/r/aww/hot.json"
-USER_AGENT = "awwbot:vercel-python:v1.0.0"
+USER_AGENT = "awwbot:vercel-python:v1.0.0 (by /u/justinblat)"
 
 
 def get_cute_url():
