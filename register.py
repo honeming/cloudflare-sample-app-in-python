@@ -63,7 +63,7 @@ def main() -> None:
         ]
     )
 
-    print("請先確認已設定 DISCORD_TOKEN，然後執行以下指令註冊命令：")
+    print("Set DISCORD_TOKEN first, then run this command to register commands:")
     print(curl_command)
 
 
