@@ -1,12 +1,11 @@
 # Discord sample app (Python + Vercel Functions)
 
-awwbot is a sample Discord bot that returns cute content from `r/aww`, built with **Python** and deployed on **Vercel Functions**.
+awwbot is a sample Discord bot built with **Python** and deployed on **Vercel Functions**.
 
 ## Resources used
 
 - [Discord Interactions API](https://discord.com/developers/docs/interactions/receiving-and-responding)
 - [Vercel Functions (Python)](https://vercel.com/docs/functions/functions-api-reference/vercel-sdk-python)
-- [Reddit API](https://www.reddit.com/dev/api/)
 
 ---
 

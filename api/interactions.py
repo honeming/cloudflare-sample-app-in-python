@@ -1,10 +1,6 @@
 # docs: https://vercel.com/docs/functions/functions-api-reference/vercel-sdk-python
 import json
 import os
-import random
-import logging
-import urllib.error
-import urllib.request
 from http.server import BaseHTTPRequestHandler
 from typing import Any
 
@@ -21,15 +17,6 @@ INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE = 4
 
 # Discord message flags
 MESSAGE_FLAG_EPHEMERAL = 64
-
-REDDIT_URL = "https://www.reddit.com/r/aww/hot.json"
-USER_AGENT = "awwbot:vercel-python:v1.0.0 (by /u/justinblat)"
-LOGGER = logging.getLogger(__name__)
-
-AWW_COMMAND = {
-    "name": "awwww",
-    "description": "Drop some cuteness on this channel.",
-}
 
 INVITE_COMMAND = {
     "name": "invite",
@@ -56,41 +43,6 @@ def _verify_discord_request(signature: str | None, timestamp: str | None, body: 
     except (ValueError, BadSignatureError):
         return False
 
-
-def _get_cute_url() -> str | None:
-    request = urllib.request.Request(
-        REDDIT_URL,
-        headers={"User-Agent": USER_AGENT},
-    )
-
-    try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as exc:
-        LOGGER.warning("Failed to fetch Reddit content: %s", exc)
-        return None
-
-    posts = []
-    for post in data.get("data", {}).get("children", []):
-        post_data = post.get("data", {})
-        if post_data.get("is_gallery"):
-            continue
-
-        url = (
-            (post_data.get("media") or {}).get("reddit_video", {}).get("fallback_url")
-            or (post_data.get("secure_media") or {})
-            .get("reddit_video", {})
-            .get("fallback_url")
-            or post_data.get("url")
-        )
-
-        if url:
-            posts.append(url)
-
-    if not posts:
-        return None
-
-    return random.choice(posts)
 
 def handle_interaction_request(
     method: str,
@@ -140,15 +92,6 @@ def handle_interaction_request(
 
     if interaction.get("type") == INTERACTION_TYPE_APPLICATION_COMMAND:
         command_name = ((interaction.get("data") or {}).get("name") or "").lower()
-
-        if command_name == AWW_COMMAND["name"].lower():
-            cute_url = _get_cute_url() or "Unable to fetch content from Reddit. Please try again later."
-            return _json_response(
-                {
-                    "type": INTERACTION_RESPONSE_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
-                    "data": {"content": cute_url},
-                }
-            )
 
         if command_name == INVITE_COMMAND["name"].lower():
             application_id = env_vars.get("DISCORD_APPLICATION_ID", "")

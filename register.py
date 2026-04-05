@@ -9,11 +9,6 @@ import json
 import os
 import shlex
 
-AWW_COMMAND = {
-    "name": "awwww",
-    "description": "Drop some cuteness on this channel.",
-}
-
 INVITE_COMMAND = {
     "name": "invite",
     "description": "Get an invite link to add the bot to your server",
@@ -48,7 +43,7 @@ def main() -> None:
         raise ValueError("The DISCORD_APPLICATION_ID environment variable is required.")
 
     url = f"https://discord.com/api/v10/applications/{application_id}/commands"
-    payload = json.dumps([AWW_COMMAND, INVITE_COMMAND], separators=(",", ":"))
+    payload = json.dumps([INVITE_COMMAND], separators=(",", ":"))
 
     curl_command = " ".join(
         [

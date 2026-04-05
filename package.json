@@ -1,7 +1,7 @@
 {
   "name": "awwbot",
   "version": "1.0.0",
-  "description": "A simple discord bot that uses intents to post pictures from r/aww",
+  "description": "A simple discord interactions bot hosted on vercel functions",
   "type": "module",
   "private": true,
   "main": "src/server.js",
